@@ -1,0 +1,15 @@
+{application, chat_server,
+ [{description, "OTP chat server"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {mod, {chat_app, []}},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[]},
+  {modules, [chat_app, chat_root_sup, chat_accept_sup, chat_genserv, chat_client]},
+
+  {licenses, ["Apache 2.0"]},
+  {links, []}
+ ]}.
