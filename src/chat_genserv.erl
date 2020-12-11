@@ -2,7 +2,7 @@
 -behavior(gen_server).
 
 -export([start_link/0, stop/0, add_client/2, remove_client/1, broadcast_message/1]).
--export([init/1, handle_call/3, handle_cast/2, handle_info/3, terminate/2, code_change/3, broadcast/2, retrieve_from_list/2]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/3, terminate/2, code_change/3, broadcast/2, retrieve_from_list/2, process_string/1]).
 
 -record(state, {clients}).
 -record(client_info, {username, socket, pid}).
@@ -15,7 +15,7 @@ start_link() ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 stop() ->
-  gen_server:call(?MODULE, stop).
+  gen_server:stop(?MODULE).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Client API
@@ -37,7 +37,7 @@ broadcast_message(Message) ->
 init([]) ->
   {ok, #state{clients=[]}}.
 
-handle_call({add_client, Username, Socket}, {Pid, _Tag}, State = #state{clients = Clients}) ->
+handle_call({add_client, Username, Socket}, {Pid, _Tag}, _State = #state{clients = Clients}) ->
   link(Pid),
   NewClient = #client_info{username=Username, socket=Socket, pid=Pid},
   MessageString = ["[", process_string(Username), " has entered the chat]\n"],
@@ -45,14 +45,11 @@ handle_call({add_client, Username, Socket}, {Pid, _Tag}, State = #state{clients 
   io:format(MessageString),
   {reply, ok, #state{clients=[NewClient|Clients]}};
 
-handle_call(stop, _From, State) ->
-  {stop, normal, ok, State};
-
 handle_call(_Other, _From, State) ->
   io:format("Server received unexpected call: ~p~n", [_Other]),
   {reply, "???", State}.
 
-handle_cast({remove_client, Pid}, State = #state{clients = Clients}) ->
+handle_cast({remove_client, Pid}, _State = #state{clients = Clients}) ->
   #client_info{username=ClientUsername} = retrieve_from_list(Clients, Pid),
   NewClients = [Client || Client <- Clients, Client#client_info.pid /= Pid],
   MessageString = ["[", process_string(ClientUsername), " has left the chat]\n"],
