@@ -37,14 +37,13 @@ broadcast_message(Message) ->
 init([]) ->
   {ok, #state{clients=[]}}.
 
-handle_call({add_client, Username, Socket}, {Pid, _Tag}, State) ->
+handle_call({add_client, Username, Socket}, {Pid, _Tag}, State = #state{clients = Clients}) ->
   link(Pid),
   NewClient = #client_info{username=Username, socket=Socket, pid=Pid},
-  NewState = State#state{clients=[NewClient|State#state.clients]},
-  MessageString = "[" ++ process_string(Username) ++ " has entered the chat]\n",
-  broadcast(State#state.clients, MessageString),
+  MessageString = ["[", process_string(Username), " has entered the chat]\n"],
+  broadcast(Clients, MessageString),
   io:format(MessageString),
-  {reply, ok, NewState};
+  {reply, ok, #state{clients=[NewClient|Clients]}};
 
 handle_call(stop, _From, State) ->
   {stop, normal, ok, State};
@@ -53,19 +52,17 @@ handle_call(_Other, _From, State) ->
   io:format("Server received unexpected call: ~p~n", [_Other]),
   {reply, "???", State}.
 
-handle_cast({remove_client, Pid}, State) ->
-  ClientBeingRemoved = retrieve_from_list(State#state.clients, Pid),
-  NewClients = [Client || Client <- State#state.clients, Client#client_info.pid /= Pid],
-  NewState = State#state{clients=NewClients},
-  MessageString = "[" ++ process_string(ClientBeingRemoved#client_info.username) ++ " has left the chat]\n",
+handle_cast({remove_client, Pid}, State = #state{clients = Clients}) ->
+  #client_info{username=ClientUsername} = retrieve_from_list(Clients, Pid),
+  NewClients = [Client || Client <- Clients, Client#client_info.pid /= Pid],
+  MessageString = ["[", process_string(ClientUsername), " has left the chat]\n"],
   broadcast(NewClients, MessageString),
   io:format(MessageString),
-  {noreply, NewState};
+  {noreply, #state{clients=NewClients}};
 
-handle_cast({broadcast_message, Pid, Message}, State) ->
-  ClientSendingMessage = retrieve_from_list(State#state.clients, Pid),
-  ClientUsername = ClientSendingMessage#client_info.username,
-  MessageString = "<" ++ process_string(ClientUsername) ++ "> " ++ process_string(Message) ++ "\n",
+handle_cast({broadcast_message, Pid, Message}, State = #state{clients = Clients}) ->
+  #client_info{username=ClientUsername} = retrieve_from_list(Clients, Pid),
+  MessageString = ["<", process_string(ClientUsername), "> ", process_string(Message), "\n"],
   broadcast(State#state.clients, MessageString),
   io:format(MessageString),
   {noreply, State}.
