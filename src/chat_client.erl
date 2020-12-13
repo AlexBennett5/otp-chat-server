@@ -14,7 +14,7 @@ client_setup(ClientSocket) ->
   gen_tcp:send(ClientSocket, "Enter your username: "),
   case gen_tcp:recv(ClientSocket, 0) of
     {ok, Username} ->
-      chat_genserv:add_client(Username, ClientSocket),
+      chat_genserv:add_client(Username, ClientSocket, self()),
       client_loop(ClientSocket);
     {error, closed} ->
       ok

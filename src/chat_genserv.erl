@@ -1,7 +1,7 @@
 -module(chat_genserv).
 -behavior(gen_server).
 
--export([start_link/0, stop/0, add_client/2, remove_client/1, broadcast_message/1]).
+-export([start_link/0, stop/0, add_client/3, remove_client/1, broadcast_message/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/3, terminate/2, code_change/3, broadcast/2, retrieve_from_list/2, process_string/1]).
 
 -record(state, {clients}).
@@ -21,8 +21,8 @@ stop() ->
 %%% Client API
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-add_client(Username, Socket) ->
-  gen_server:call(?MODULE, {add_client, Username, Socket}).
+add_client(Username, Socket, Pid) ->
+  gen_server:call(?MODULE, {add_client, Username, Socket, Pid}).
 
 remove_client(Pid) ->
   gen_server:cast(?MODULE, {remove_client, Pid}).
@@ -37,7 +37,7 @@ broadcast_message(Message) ->
 init([]) ->
   {ok, #state{clients=[]}}.
 
-handle_call({add_client, Username, Socket}, {Pid, _Tag}, _State = #state{clients = Clients}) ->
+handle_call({add_client, Username, Socket, Pid}, _From, _State = #state{clients = Clients}) ->
   link(Pid),
   NewClient = #client_info{username=Username, socket=Socket, pid=Pid},
   MessageString = ["[", process_string(Username), " has entered the chat]\n"],
