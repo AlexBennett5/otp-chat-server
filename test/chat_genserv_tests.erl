@@ -77,12 +77,12 @@ initial_empty(ServerPid) ->
   ?_assertEqual(CurrentState#state.clients, []).
 
 add_client_to_empty_server(ServerPid) ->
-  ClientPid = spawn_link(fun() -> mock_gen_tcp_return_one(),
-                                  gen_server:call(ServerPid, {add_client, "Test", 100}),
-                                  unmock_gen_tcp() end),
+  mock_gen_tcp_return_one(),
+  chat_genserv:add_client("Test", 100),
   CurrentState = sys:get_state(ServerPid),
+  unmock_gen_tcp(),
   [?_assertEqual(length(CurrentState#state.clients), 1),
-   ?_assertEqual(CurrentState#state.clients, [#client_info{username="Test", socket=100, pid=ClientPid}])].
+   ?_assertEqual(CurrentState#state.clients, [#client_info{username="Test", socket=100, pid=self()}])].
 
 add_client_to_server_with_one(ServerPid) ->
   ClientPidOne = spawn_link(fun() -> mock_gen_tcp_return_one(),
